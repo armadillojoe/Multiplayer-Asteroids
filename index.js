@@ -1,10 +1,10 @@
+// Server side
 (function() {
 	// Import all needed modules
 	var express = require('express');
 	var app = express();
 	var http = require("http").Server(app);
 	var io = require("socket.io")(http);
-	var ArrayList = require("./js/ArrayList.js").ArrayList;
 	
 	// Constants
 	var PORT = 7777;
@@ -12,7 +12,7 @@
 	var WIDTH = 800;
 	
 	// Stores all players currently connected
-	var players = new ArrayList();
+	var players = [];
 	
 	// Listen on the specified port
 	http.listen(PORT, function() {
@@ -29,13 +29,16 @@
 	
 	// Handle client connections
 	io.on("connection", function(socket) {
-		console.log("New user connected: " + socket.id);
 		var newPlayer = {
 			id: socket.id,
 			x: Math.floor(Math.random() * WIDTH),
 			y: Math.floor(Math.random() * HEIGHT)
 		};
-		players.add(newPlayer);
+		players.push(newPlayer);
+		console.log("New user connected! Total Users: %d", players.length);
+		
+		// Send the new player to all other players
+		socket.broadcast.emit("newPlayer", newPlayer);
 		
 		// Send all other players to the new player
 		socket.on("requestPlayers", function(data) {
@@ -45,8 +48,8 @@
 				canvas: {height: HEIGHT, width: WIDTH}
 			};
 			
-			for (var i = 0; i < players.size(); i++) {
-				toSend.players.push(players.get(i));
+			for (var i = 0; i < players.length; i++) {
+				toSend.players.push(players[i]);
 			}
 			
 			io.to(socket.id).emit("requestPlayers", toSend);
@@ -54,7 +57,14 @@
 		
 		// Handle disconnections
 		socket.on("disconnect", function() {
-			console.log("A user has disconnected!");
+			socket.broadcast.emit("removePlayer", socket.id);
+			for (var i = 0; i < players.length; i++) {
+				if (players[i].id == socket.id) {
+					players.splice(i, 1);
+					console.log("A user has disconnected! Total Users: %d", players.length);
+					return;
+				}
+			}
 		});
 	});
 })();
