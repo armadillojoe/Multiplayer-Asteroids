@@ -8,7 +8,7 @@
 	
 	// Constants
 	var PORT = 7777;
-	var HEIGHT = 800;
+	var HEIGHT = 400;
 	var WIDTH = 800;
 	
 	// Stores all players currently connected
@@ -55,6 +55,17 @@
 			io.to(socket.id).emit("requestPlayers", toSend);
 		});
 		
+		socket.on("updatePlayer", function(position) {
+			for (var i = 0; i < players.length; i++) {
+				if (players[i].id = socket.id) {
+					players[i].x = position.x;
+					players[i].y = position.y;
+					socket.broadcast.emit("updatePlayer", players[i]);
+					break;
+				}
+			}
+		});
+		
 		// Handle disconnections
 		socket.on("disconnect", function() {
 			socket.broadcast.emit("removePlayer", socket.id);
@@ -62,7 +73,7 @@
 				if (players[i].id == socket.id) {
 					players.splice(i, 1);
 					console.log("A user has disconnected! Total Users: %d", players.length);
-					return;
+					break;
 				}
 			}
 		});
