@@ -1,4 +1,8 @@
-// Server side
+/* Copyright 2016 Joseph Jimenez
+ * Server side code for simple 2d network 
+ * enabled game.
+ */
+ 
 (function() {
 	// Import all needed modules
 	var express = require('express');
@@ -55,9 +59,10 @@
 			io.to(socket.id).emit("requestPlayers", toSend);
 		});
 		
+		// Update players position coordinates
 		socket.on("updatePlayer", function(position) {
 			for (var i = 0; i < players.length; i++) {
-				if (players[i].id = socket.id) {
+				if (players[i].id == socket.id) {
 					players[i].x = position.x;
 					players[i].y = position.y;
 					socket.broadcast.emit("updatePlayer", players[i]);

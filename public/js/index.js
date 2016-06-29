@@ -1,4 +1,8 @@
-// Client side
+/* Copyright 2016 Joseph Jimenez
+ * Client side code for simple 2d network 
+ * enabled game.
+ */
+
 (function() { 
 	// Connect to server
 	var socket = io();
@@ -6,6 +10,9 @@
 	// Canvas used to draw game on
 	var canvas;
 	var ctx;
+	
+	// Used for delta time
+	var startTime;
 	
 	// Players currently connected
 	var players = [];
@@ -25,40 +32,50 @@
 		canvas = document.createElement("canvas");
 		ctx = canvas.getContext("2d");
 		document.querySelector("body").appendChild(canvas);
+		startTime = new Date().getTime();
 		socket.emit("requestPlayers", {});
 		initializeControls();
 		render();
 	};
 	
+	// Loop that renders the canvas to the screen
 	function render() {
-		updatePlayers();
+		updatePlayer();
 		ctx.fillStyle = "#4C9ADE";
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
-		ctx.fillStyle = "#FF0000";
-		ctx.fillRect(localPlayer.x, localPlayer.y, 5, 5);
 		ctx.fillStyle = "#000000";
 		for (var i = 0; i < players.length; i++) {
 			ctx.fillRect(players[i].x, players[i].y, 5, 5);
 		}
+		ctx.fillStyle = "#FF0000";
+		ctx.fillRect(localPlayer.x, localPlayer.y, 5, 5);
 		requestAnimationFrame(render);
 	}
 	
-	function updatePlayers() {
+	// Updates the position of the local player from key presses
+	function updatePlayer() {
 		var changed = false;
+		var currentTime = new Date().getTime();
+		var dt = currentTime - startTime;
+		var fps = 1000 / dt;
+		document.querySelector("h1").innerHTML = "FPS: " + fps.toFixed(2);
+		var ratio = fps / 45;
+		var timeScaleFactor = 1 / ratio;
+		startTime = currentTime;
 		if (localPlayer.left) {
-			localPlayer.x -= 7;
+			localPlayer.x -= 7 * timeScaleFactor;
 			changed = true;
 		}
 		if (localPlayer.right) {
-			localPlayer.x += 7;
+			localPlayer.x += 7 * timeScaleFactor;
 			changed = true;
 		}
 		if (localPlayer.up) {
-			localPlayer.y -= 7;
+			localPlayer.y -= 7 * timeScaleFactor;
 			changed = true;
 		}
 		if (localPlayer.down) {
-			localPlayer.y += 7;
+			localPlayer.y += 7 * timeScaleFactor;
 			changed = true;
 		}
 		if (changed) {
@@ -82,9 +99,10 @@
 		canvas.width = data.canvas.width;
 	});
 	
+	// Updates location of other players
 	socket.on("updatePlayer", function(data) {
 		for (var i = 0; i < players.length; i++) {
-			if (players[i].id = data.id) {
+			if (players[i].id == data.id) {
 				players[i].x = data.x;
 				players[i].y = data.y;
 				break;
@@ -92,6 +110,7 @@
 		}
 	});
 	
+	// Removes player from the game
 	socket.on("removePlayer", function(id) {
 		for (var i = 0; i < players.length; i++) {
 			if (players[i].id == id) {
@@ -102,6 +121,7 @@
 		}
 	});
 	
+	// Adds a new player to the game
 	socket.on("newPlayer", function(player) {
 		players.push(player);
 		console.log(player.id);
