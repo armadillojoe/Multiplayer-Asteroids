@@ -3,22 +3,24 @@
  * enabled game.
  */
 
-(function() { 
+(function() {
+	"use strict";
+	
 	// Connect to server
-	var socket = io();
+	let socket = io();
 	
 	// Canvas used to draw game on
-	var canvas;
-	var ctx;
+	let canvas;
+	let ctx;
 	
 	// Used for delta time
-	var startTime;
+	let startTime;
 	
 	// Players currently connected
-	var players = [];
+	let players = {};
 	
 	// Local player object
-	var localPlayer = {
+	let localPlayer = {
 		x: 0,
 		y: 0,
 		left: false,
@@ -44,8 +46,8 @@
 		ctx.fillStyle = "#4C9ADE";
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
 		ctx.fillStyle = "#000000";
-		for (var i = 0; i < players.length; i++) {
-			ctx.fillRect(players[i].x, players[i].y, 5, 5);
+		for (let id in players) {
+			ctx.fillRect(players[id].x, players[id].y, 5, 5);
 		}
 		ctx.fillStyle = "#FF0000";
 		ctx.fillRect(localPlayer.x, localPlayer.y, 5, 5);
@@ -54,13 +56,13 @@
 	
 	// Updates the position of the local player from key presses
 	function updatePlayer() {
-		var changed = false;
-		var currentTime = new Date().getTime();
-		var dt = currentTime - startTime;
-		var fps = 1000 / dt;
+		let changed = false;
+		let currentTime = new Date().getTime();
+		let dt = currentTime - startTime;
+		let fps = 1000 / dt;
 		document.querySelector("h1").innerHTML = "FPS: " + fps.toFixed(2);
-		var ratio = fps / 45;
-		var timeScaleFactor = 1 / ratio;
+		let ratio = fps / 45;
+		let timeScaleFactor = 1 / ratio;
 		startTime = currentTime;
 		if (localPlayer.left) {
 			localPlayer.x -= 7 * timeScaleFactor;
@@ -85,45 +87,37 @@
 	
 	// Adds players in the game to local players array
 	socket.on("requestPlayers", function(data) {
-		players = [];
-		for (var i = 0; i < data.players.length; i++) {
-			if (data.id != data.players[i].id) {
-				players.push(data.players[i]);
+		players = {};
+		for (let id in data.players) {
+			if (data.id != id) {
+				players[id] = {x: data.players[id].x, y: data.players[id].y};
 			} else {
-				localPlayer.x = data.players[i].x;
-				localPlayer.y = data.players[i].y;
+				localPlayer.x = data.players[id].x;
+				localPlayer.y = data.players[id].y;
 			}
-		}
-		
+		}	
 		canvas.height = data.canvas.height;
 		canvas.width = data.canvas.width;
 	});
 	
 	// Updates location of other players
 	socket.on("updatePlayer", function(data) {
-		for (var i = 0; i < players.length; i++) {
-			if (players[i].id == data.id) {
-				players[i].x = data.x;
-				players[i].y = data.y;
-				break;
-			}
+		if (players.hasOwnProperty(data.id)) {
+			players[data.id].x = data.x;
+			players[data.id].y = data.y;
 		}
 	});
 	
 	// Removes player from the game
 	socket.on("removePlayer", function(id) {
-		for (var i = 0; i < players.length; i++) {
-			if (players[i].id == id) {
-				players.splice(i, 1);
-				console.log(players.length);
-				return;
-			}
+		if (players.hasOwnProperty(id)) {
+			delete players[id];
 		}
 	});
 	
 	// Adds a new player to the game
 	socket.on("newPlayer", function(player) {
-		players.push(player);
+		players[player.id] = {x: player.x, y: player.y};
 		console.log(player.id);
 	});
 	
