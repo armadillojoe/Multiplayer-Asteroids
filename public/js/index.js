@@ -38,10 +38,10 @@
 	// Starts game once user types in their name
 	function init() {
 		let name = document.getElementById("nameinput").value;
-		document.getElementById("main").innerHTML = "";
+		document.getElementById("middle").innerHTML = "";
 		canvas = document.createElement("canvas");
 		ctx = canvas.getContext("2d");
-		document.getElementById("main").appendChild(canvas);
+		document.getElementById("middle").appendChild(canvas);
 		startTime = new Date().getTime();
 		localPlayer.name = name;
 		socket.emit("requestPlayers", name);
@@ -61,7 +61,7 @@
 		}
 		ctx.fillStyle = "#FF0000";
 		ctx.fillRect(localPlayer.x, localPlayer.y, 5, 5);
-		ctx.font = "10px Arial";
+		ctx.font = "12px sans-serif";
 		ctx.fillText(localPlayer.name, localPlayer.x - localPlayer.name.length * 2, localPlayer.y - 10);
 		requestAnimationFrame(render);
 	}
