@@ -14,7 +14,7 @@
 	
 	// Constants
 	const PORT = 7777;
-	const HEIGHT = 400;
+	const HEIGHT = 600;
 	const WIDTH = 800;
 	
 	// Stores all players currently connected
@@ -37,23 +37,25 @@
 	io.on("connection", function(socket) {
 		let newPlayer = {
 			id: socket.id,
+			name: "",
 			x: Math.floor(Math.random() * WIDTH),
 			y: Math.floor(Math.random() * HEIGHT)
 		};
 
-		players[newPlayer.id] = {x: newPlayer.x, y: newPlayer.y};
+		players[newPlayer.id] = {name: "", x: newPlayer.x, y: newPlayer.y};
 		console.log("New user connected! Total Users: %d", Object.keys(players).length);
 		
-		// Send the new player to all other players
-		socket.broadcast.emit("newPlayer", newPlayer);
-		
 		// Send all other players to the new player
-		socket.on("requestPlayers", function(data) {
+		socket.on("requestPlayers", function(name) {
 			let toSend = {
 				id: socket.id,
 				players: players,
 				canvas: {height: HEIGHT, width: WIDTH}
 			};
+			// Send the new player to all other players
+			players[newPlayer.id].name = name;
+			newPlayer.name = name;
+			socket.broadcast.emit("newPlayer", newPlayer);
 			io.to(socket.id).emit("requestPlayers", toSend);
 		});
 		

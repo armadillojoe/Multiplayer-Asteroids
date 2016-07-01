@@ -21,6 +21,7 @@
 	
 	// Local player object
 	let localPlayer = {
+		name: "player",
 		x: 0,
 		y: 0,
 		left: false,
@@ -31,15 +32,22 @@
 	
 	// Initialize game
 	window.onload = function() {
-		canvas = document.createElement("canvas");
-		ctx = canvas.getContext("2d");
-		document.querySelector("body").appendChild(canvas);
-		startTime = new Date().getTime();
-		socket.emit("requestPlayers", {});
-		initializeControls();
-		render();
+		document.getElementById("play").onclick = init;
 	};
 	
+	// Starts game once user types in their name
+	function init() {
+		let name = document.getElementById("nameinput").value;
+		document.getElementById("main").innerHTML = "";
+		canvas = document.createElement("canvas");
+		ctx = canvas.getContext("2d");
+		document.getElementById("main").appendChild(canvas);
+		startTime = new Date().getTime();
+		localPlayer.name = name;
+		socket.emit("requestPlayers", name);
+		initializeControls();
+		render();
+	}
 	// Loop that renders the canvas to the screen
 	function render() {
 		updatePlayer();
@@ -48,9 +56,13 @@
 		ctx.fillStyle = "#000000";
 		for (let id in players) {
 			ctx.fillRect(players[id].x, players[id].y, 5, 5);
+			ctx.font = "10px Arial";
+			ctx.fillText(players[id].name, players[id].x - players[id].name.length * 2, players[id].y - 10);
 		}
 		ctx.fillStyle = "#FF0000";
 		ctx.fillRect(localPlayer.x, localPlayer.y, 5, 5);
+		ctx.font = "10px Arial";
+		ctx.fillText(localPlayer.name, localPlayer.x - localPlayer.name.length * 2, localPlayer.y - 10);
 		requestAnimationFrame(render);
 	}
 	
@@ -60,7 +72,6 @@
 		let currentTime = new Date().getTime();
 		let dt = currentTime - startTime;
 		let fps = 1000 / dt;
-		document.querySelector("h1").innerHTML = "FPS: " + fps.toFixed(2);
 		let ratio = fps / 45;
 		let timeScaleFactor = 1 / ratio;
 		startTime = currentTime;
@@ -90,7 +101,7 @@
 		players = {};
 		for (let id in data.players) {
 			if (data.id != id) {
-				players[id] = {x: data.players[id].x, y: data.players[id].y};
+				players[id] = {name: data.players[id].name, x: data.players[id].x, y: data.players[id].y};
 			} else {
 				localPlayer.x = data.players[id].x;
 				localPlayer.y = data.players[id].y;
@@ -117,7 +128,7 @@
 	
 	// Adds a new player to the game
 	socket.on("newPlayer", function(player) {
-		players[player.id] = {x: player.x, y: player.y};
+		players[player.id] = {name: player.name, x: player.x, y: player.y};
 		console.log(player.id);
 	});
 	
