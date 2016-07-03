@@ -39,10 +39,16 @@
 			id: socket.id,
 			name: "",
 			x: Math.floor(Math.random() * WIDTH),
-			y: Math.floor(Math.random() * HEIGHT)
+			y: Math.floor(Math.random() * HEIGHT),
+			angle: 270
 		};
 
-		players[newPlayer.id] = {name: "", x: newPlayer.x, y: newPlayer.y};
+		players[newPlayer.id] = {
+			name: "",
+			x: newPlayer.x,
+			y: newPlayer.y,
+			angle: newPlayer.angle
+		};
 		console.log("New user connected! Total Users: %d", Object.keys(players).length);
 		
 		// Send all other players to the new player
@@ -64,8 +70,23 @@
 			if (players.hasOwnProperty(socket.id)) {
 				players[socket.id].x = position.x;
 				players[socket.id].y = position.y;
-				socket.broadcast.emit("updatePlayer", {id: socket.id, x: position.x, y: position.y});
+				players[socket.id].angle = position.angle;
+				socket.broadcast.emit("updatePlayer", {
+					id: socket.id,
+					x: position.x,
+					y: position.y,
+					angle: position.angle
+				});
 			}
+		});
+		
+		// Handles shots being fired
+		socket.on("shotFired", function() {
+			socket.broadcast.emit("shotFired", {
+				x: players[socket.id].x,
+				y: players[socket.id].y,
+				dir: players[socket.id].angle
+			});
 		});
 		
 		// Handle disconnections

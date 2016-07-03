@@ -13,21 +13,30 @@
 	let canvas;
 	let ctx;
 	
+	// Stores images to draw easier
+	let imageCache = {
+		ship: null,
+		redShip: null
+	};
+	
 	// Used for delta time
 	let startTime;
 	
 	// Players currently connected
 	let players = {};
 	
+	// Shots on the screen
+	let shots = [];
+	
 	// Local player object
 	let localPlayer = {
-		name: "player",
+		name: "",
 		x: 0,
 		y: 0,
+		angle: 270,
 		left: false,
 		right: false,
-		up: false,
-		down: false
+		up: false
 	};
 	
 	// Initialize game
@@ -37,6 +46,10 @@
 	
 	// Starts game once user types in their name
 	function init() {
+		imageCache.ship = new Image();
+		imageCache.redShip = new Image();
+		imageCache.ship.src = "../images/ship.png";
+		imageCache.redShip.src = "../images/shipRed.png";
 		let name = document.getElementById("nameinput").value;
 		document.getElementById("middle").innerHTML = "";
 		canvas = document.createElement("canvas");
@@ -48,6 +61,7 @@
 		initializeControls();
 		render();
 	}
+	
 	// Loop that renders the canvas to the screen
 	function render() {
 		updatePlayer();
@@ -55,14 +69,17 @@
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
 		ctx.fillStyle = "#000000";
 		for (let id in players) {
-			ctx.fillRect(players[id].x, players[id].y, 5, 5);
-			ctx.font = "10px Arial";
-			ctx.fillText(players[id].name, players[id].x - players[id].name.length * 2, players[id].y - 10);
+			drawRotatedImage(imageCache.ship, players[id].x, players[id].y, players[id].angle);
+			ctx.font = "12px sans-serif";
+			ctx.fillText(players[id].name, players[id].x - players[id].name.length * 2, players[id].y - 20);
+		}
+		for (let i = 0; i < shots.length; i++) {
+			ctx.fillRect(shots[i].x, shots[i].y, 4, 4);
 		}
 		ctx.fillStyle = "#FF0000";
-		ctx.fillRect(localPlayer.x, localPlayer.y, 5, 5);
+		drawRotatedImage(imageCache.ship, localPlayer.x, localPlayer.y, localPlayer.angle);
 		ctx.font = "12px sans-serif";
-		ctx.fillText(localPlayer.name, localPlayer.x - localPlayer.name.length * 2, localPlayer.y - 10);
+		ctx.fillText(localPlayer.name, localPlayer.x, localPlayer.y - 20);
 		requestAnimationFrame(render);
 	}
 	
@@ -76,15 +93,20 @@
 		let timeScaleFactor = 1 / ratio;
 		startTime = currentTime;
 		if (localPlayer.left) {
-			localPlayer.x -= 7 * timeScaleFactor;
+			localPlayer.angle = localPlayer.angle - (7 * timeScaleFactor);
+			if (localPlayer.angle < 0) {
+				localPlayer.angle = 360;
+			}
 			changed = true;
 		}
 		if (localPlayer.right) {
-			localPlayer.x += 7 * timeScaleFactor;
+			localPlayer.angle = (localPlayer.angle + (7 * timeScaleFactor)) % 360;
 			changed = true;
 		}
 		if (localPlayer.up) {
-			localPlayer.y -= 7 * timeScaleFactor;
+			let rad = localPlayer.angle * Math.PI / 180;
+			localPlayer.x += Math.cos(rad) * 7 * timeScaleFactor;
+			localPlayer.y += Math.sin(rad) * 7 * timeScaleFactor;
 			changed = true;
 		}
 		if (localPlayer.down) {
@@ -92,7 +114,21 @@
 			changed = true;
 		}
 		if (changed) {
-			socket.emit("updatePlayer", {x: localPlayer.x, y: localPlayer.y});
+			socket.emit("updatePlayer", {
+				x: localPlayer.x,
+				y: localPlayer.y,
+				angle: localPlayer.angle
+			});
+		}
+		
+		// Update shots
+		for (let i = 0; i < shots.length; i++) {
+			shots[i].x += Math.cos(shots[i].dir * Math.PI / 180) * 12 * timeScaleFactor;
+			shots[i].y += Math.sin(shots[i].dir * Math.PI / 180) * 12 * timeScaleFactor;
+			if (shots[i].x < 0 || shots[i].x > canvas.width || shots[i].y < 0 || shots[i].y > canvas.height) {
+				shots.splice(i, 1);
+				i--;
+			}
 		}
 	}
 	
@@ -101,7 +137,12 @@
 		players = {};
 		for (let id in data.players) {
 			if (data.id != id) {
-				players[id] = {name: data.players[id].name, x: data.players[id].x, y: data.players[id].y};
+				players[id] = {
+					name: data.players[id].name,
+				    x: data.players[id].x,
+				    y: data.players[id].y,
+				    angle: data.players[id].angle
+				};
 			} else {
 				localPlayer.x = data.players[id].x;
 				localPlayer.y = data.players[id].y;
@@ -116,6 +157,7 @@
 		if (players.hasOwnProperty(data.id)) {
 			players[data.id].x = data.x;
 			players[data.id].y = data.y;
+			players[data.id].angle = data.angle;
 		}
 	});
 	
@@ -128,8 +170,24 @@
 	
 	// Adds a new player to the game
 	socket.on("newPlayer", function(player) {
-		players[player.id] = {name: player.name, x: player.x, y: player.y};
+		players[player.id] = {
+			name: player.name,
+			x: player.x,
+			y: player.y,
+			angle: player.angle
+		};
 		console.log(player.id);
+	});
+	
+	// Handles other players shooting
+	socket.on("shotFired", function(position) {
+		let shotID = shots.length;
+		shots.push({
+			id: shotID,
+			x: position.x,
+			y: position.y,
+			dir: position.dir
+		});
 	});
 	
 	// Sets up WASD control scheme
@@ -137,20 +195,41 @@
 		document.addEventListener("keydown", function(event) {
 			switch (event.keyCode) {
 				case 87: localPlayer.up = true; break;
-				case 83: localPlayer.down = true; break;
 				case 65: localPlayer.left = true; break;
 				case 68: localPlayer.right = true; break;
+				case 32: shotFired(); break;
 				default: break;
 			}
 		});	
 		document.addEventListener("keyup", function(event) {
 			switch (event.keyCode) {
 				case 87: localPlayer.up = false; break;
-				case 83: localPlayer.down = false; break;
 				case 65: localPlayer.left = false; break;
 				case 68: localPlayer.right = false; break;
 				default: break;
 			}
 		});
+	}
+	
+	// Lets all clients and the server know a shot was fired
+	function shotFired() {
+		let shotID = shots.length;
+		let rad = localPlayer.angle * Math.PI / 180;
+		shots.push({
+			id: shotID,
+			x: localPlayer.x + Math.cos(rad) * 16,
+			y: localPlayer.y + Math.sin(rad) * 16,
+			dir: localPlayer.angle
+		});
+		socket.emit("shotFired");
+	}
+	
+	// Draws rotated images centered at the x and y coordinate
+	function drawRotatedImage(image, x, y, angle) {
+		ctx.save();
+		ctx.translate(x, y);
+		ctx.rotate(angle * Math.PI / 180);
+		ctx.drawImage(image, -16, -16);
+		ctx.restore();
 	}
 })();
