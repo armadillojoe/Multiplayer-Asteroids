@@ -217,7 +217,7 @@
 		let rad = localPlayer.angle * Math.PI / 180;
 		shots.push({
 			id: shotID,
-			x: localPlayer.x + Math.cos(rad) * 16,
+			x: (localPlayer.x + Math.cos(rad) * 16) - 2,
 			y: localPlayer.y + Math.sin(rad) * 16,
 			dir: localPlayer.angle
 		});
