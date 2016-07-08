@@ -82,9 +82,10 @@
 		
 		// Handles shots being fired
 		socket.on("shotFired", function() {
+			let rad = players[socket.id].angle * Math.PI / 180;
 			socket.broadcast.emit("shotFired", {
-				x: players[socket.id].x,
-				y: players[socket.id].y,
+				x: (players[socket.id].x + Math.cos(rad) * 16) - 2,
+				y: players[socket.id].y + Math.sin(rad) * 16,
 				dir: players[socket.id].angle
 			});
 		});

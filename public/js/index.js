@@ -36,7 +36,8 @@
 		angle: 270,
 		left: false,
 		right: false,
-		up: false
+		up: false,
+		hit: false
 	};
 	
 	// Initialize game
@@ -64,7 +65,7 @@
 	
 	// Loop that renders the canvas to the screen
 	function render() {
-		updatePlayer();
+		update();
 		ctx.fillStyle = "#4C9ADE";
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
 		ctx.fillStyle = "#000000";
@@ -77,14 +78,18 @@
 			ctx.fillRect(shots[i].x, shots[i].y, 4, 4);
 		}
 		ctx.fillStyle = "#FF0000";
-		drawRotatedImage(imageCache.ship, localPlayer.x, localPlayer.y, localPlayer.angle);
+		if (localPlayer.hit) {
+			drawRotatedImage(imageCache.redShip, localPlayer.x, localPlayer.y, localPlayer.angle);
+		} else {
+			drawRotatedImage(imageCache.ship, localPlayer.x, localPlayer.y, localPlayer.angle);
+		}
 		ctx.font = "12px sans-serif";
 		ctx.fillText(localPlayer.name, localPlayer.x, localPlayer.y - 20);
 		requestAnimationFrame(render);
 	}
 	
-	// Updates the position of the local player from key presses
-	function updatePlayer() {
+	// Updates the physics of the game
+	function update() {
 		let changed = false;
 		let currentTime = new Date().getTime();
 		let dt = currentTime - startTime;
@@ -125,6 +130,9 @@
 		for (let i = 0; i < shots.length; i++) {
 			shots[i].x += Math.cos(shots[i].dir * Math.PI / 180) * 12 * timeScaleFactor;
 			shots[i].y += Math.sin(shots[i].dir * Math.PI / 180) * 12 * timeScaleFactor;
+			if (distance(localPlayer.x, localPlayer.y, shots[i].x, shots[i].y) < 14) {
+				localPlayer.hit = true;
+			}
 			if (shots[i].x < 0 || shots[i].x > canvas.width || shots[i].y < 0 || shots[i].y > canvas.height) {
 				shots.splice(i, 1);
 				i--;
@@ -181,9 +189,7 @@
 	
 	// Handles other players shooting
 	socket.on("shotFired", function(position) {
-		let shotID = shots.length;
 		shots.push({
-			id: shotID,
 			x: position.x,
 			y: position.y,
 			dir: position.dir
@@ -213,10 +219,8 @@
 	
 	// Lets all clients and the server know a shot was fired
 	function shotFired() {
-		let shotID = shots.length;
 		let rad = localPlayer.angle * Math.PI / 180;
 		shots.push({
-			id: shotID,
 			x: (localPlayer.x + Math.cos(rad) * 16) - 2,
 			y: localPlayer.y + Math.sin(rad) * 16,
 			dir: localPlayer.angle
@@ -231,5 +235,10 @@
 		ctx.rotate(angle * Math.PI / 180);
 		ctx.drawImage(image, -16, -16);
 		ctx.restore();
+	}
+	
+	// Calulates distance between two points
+	function distance(x1, y1, x2, y2) {
+		return Math.sqrt(((x1 - x2) * (x1 - x2)) + ((y1 - y2) * (y1 - y2)));
 	}
 })();
