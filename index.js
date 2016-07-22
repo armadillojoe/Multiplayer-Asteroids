@@ -1,4 +1,5 @@
-/* Copyright 2016 Joseph Jimenez
+/* 
+ * Copyright 2016 Joseph Jimenez
  * Server side code for simple 2d network 
  * enabled game.
  */

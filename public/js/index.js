@@ -1,4 +1,5 @@
-/* Copyright 2016 Joseph Jimenez
+/* 
+ * Copyright 2016 Joseph Jimenez
  * Client side code for simple 2d network 
  * enabled game.
  */
@@ -22,11 +23,10 @@
 	// Used for delta time
 	let startTime;
 	
-	// Players currently connected
+	// Various objects in the game
 	let players = {};
-	
-	// Shots on the screen
 	let shots = [];
+	let particles = [];
 	
 	// Local player object
 	let localPlayer = {
@@ -37,6 +37,7 @@
 		left: false,
 		right: false,
 		up: false,
+		shoot: false,
 		hit: false
 	};
 	
@@ -77,10 +78,11 @@
 		for (let i = 0; i < shots.length; i++) {
 			ctx.fillRect(shots[i].x, shots[i].y, 4, 4);
 		}
+		for (let i = 0; i < particles.length; i++) {
+			ctx.fillRect(particles[i].x, particles[i].y, 4, 4);
+		}
 		ctx.fillStyle = "#FF0000";
-		if (localPlayer.hit) {
-			drawRotatedImage(imageCache.redShip, localPlayer.x, localPlayer.y, localPlayer.angle);
-		} else {
+		if (!localPlayer.hit) {
 			drawRotatedImage(imageCache.ship, localPlayer.x, localPlayer.y, localPlayer.angle);
 		}
 		ctx.font = "12px sans-serif";
@@ -90,13 +92,16 @@
 	
 	// Updates the physics of the game
 	function update() {
-		let changed = false;
+		// Timing stuff
 		let currentTime = new Date().getTime();
 		let dt = currentTime - startTime;
 		let fps = 1000 / dt;
 		let ratio = fps / 45;
 		let timeScaleFactor = 1 / ratio;
 		startTime = currentTime;
+		
+		// Update the local player
+		let changed = false;
 		if (localPlayer.left) {
 			localPlayer.angle = localPlayer.angle - (7 * timeScaleFactor);
 			if (localPlayer.angle < 0) {
@@ -114,9 +119,8 @@
 			localPlayer.y += Math.sin(rad) * 7 * timeScaleFactor;
 			changed = true;
 		}
-		if (localPlayer.down) {
-			localPlayer.y += 7 * timeScaleFactor;
-			changed = true;
+		if (localPlayer.shoot) {
+			shotFired(); 
 		}
 		if (changed) {
 			socket.emit("updatePlayer", {
@@ -125,6 +129,13 @@
 				angle: localPlayer.angle
 			});
 		}
+		if (localPlayer.hasOwnProperty("hitTimer")) {
+			if (localPlayer.hitTimer <= 0) {
+				location.reload();
+			} else {
+				localPlayer.hitTimer--;
+			}
+		}
 		
 		// Update shots
 		for (let i = 0; i < shots.length; i++) {
@@ -132,10 +143,24 @@
 			shots[i].y += Math.sin(shots[i].dir * Math.PI / 180) * 12 * timeScaleFactor;
 			if (distance(localPlayer.x, localPlayer.y, shots[i].x, shots[i].y) < 14) {
 				localPlayer.hit = true;
+				localPlayer.hitTimer = 40;
+				shipHit(localPlayer.x, localPlayer.y);
 			}
 			if (shots[i].x < 0 || shots[i].x > canvas.width || shots[i].y < 0 || shots[i].y > canvas.height) {
 				shots.splice(i, 1);
 				i--;
+			}
+		}
+		
+		// Update particles
+		for (let i = 0; i < particles.length; i++) {
+			if (particles[i].timer <= 0) {
+				particles.splice(i, 1);
+				i--;
+			} else {
+				particles[i].x += Math.cos(particles[i].dir * Math.PI / 180) * particles[i].speed * timeScaleFactor;
+				particles[i].y += Math.sin(particles[i].dir * Math.PI / 180) * particles[i].speed * timeScaleFactor;
+				particles[i].timer--;
 			}
 		}
 	}
@@ -203,7 +228,7 @@
 				case 87: localPlayer.up = true; break;
 				case 65: localPlayer.left = true; break;
 				case 68: localPlayer.right = true; break;
-				case 32: shotFired(); break;
+				case 32: localPlayer.shoot = true; break;
 				default: break;
 			}
 		});	
@@ -212,9 +237,25 @@
 				case 87: localPlayer.up = false; break;
 				case 65: localPlayer.left = false; break;
 				case 68: localPlayer.right = false; break;
+				case 32: localPlayer.shoot = false; break;
 				default: break;
 			}
 		});
+	}
+	
+	// Ship explodes into many particles
+	function shipHit(startX, startY) {
+		let numParticles = 20;
+		let timeUntilGone = 17;
+		for (let i = 0; i < numParticles; i++) {
+			particles.push({
+				x: startX,
+				y: startY,
+				speed: Math.floor(Math.random() * 3) + 3,
+				dir: Math.floor(Math.random() * 360),
+				timer: timeUntilGone + Math.floor(Math.random() * 7)
+			});
+		}
 	}
 	
 	// Lets all clients and the server know a shot was fired
@@ -237,7 +278,7 @@
 		ctx.restore();
 	}
 	
-	// Calulates distance between two points
+	// Calulates euclidean distance between two points
 	function distance(x1, y1, x2, y2) {
 		return Math.sqrt(((x1 - x2) * (x1 - x2)) + ((y1 - y2) * (y1 - y2)));
 	}
