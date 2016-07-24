@@ -64,6 +64,24 @@
 		render();
 	}
 	
+	// Shows a game over box
+	function gameOver() {
+		let middle = document.getElementById("middle");
+		let box = document.createElement("div");
+		let head = document.createElement("h1");
+		let ok = document.createElement("button");
+		middle.innerHTML = "";
+		head.innerHTML = "Game Over";
+		ok.innerHTML = "OK";
+		ok.onclick = function() {
+			location.reload();
+		};
+		box.appendChild(head);
+		box.appendChild(ok);
+		box.id = "gameover";
+		middle.appendChild(box);
+	}
+	
 	// Loop that renders the canvas to the screen
 	function render() {
 		update();
@@ -84,9 +102,9 @@
 		ctx.fillStyle = "#FF0000";
 		if (!localPlayer.hit) {
 			drawRotatedImage(imageCache.ship, localPlayer.x, localPlayer.y, localPlayer.angle);
+			ctx.font = "12px sans-serif";
+			ctx.fillText(localPlayer.name, localPlayer.x, localPlayer.y - 20);
 		}
-		ctx.font = "12px sans-serif";
-		ctx.fillText(localPlayer.name, localPlayer.x, localPlayer.y - 20);
 		requestAnimationFrame(render);
 	}
 	
@@ -130,21 +148,21 @@
 			});
 		}
 		if (localPlayer.hasOwnProperty("hitTimer")) {
-			if (localPlayer.hitTimer <= 0) {
-				location.reload();
-			} else {
-				localPlayer.hitTimer--;
+			if (localPlayer.hitTimer === 0) {
+				gameOver();
 			}
+			localPlayer.hitTimer--;
 		}
 		
 		// Update shots
 		for (let i = 0; i < shots.length; i++) {
 			shots[i].x += Math.cos(shots[i].dir * Math.PI / 180) * 12 * timeScaleFactor;
 			shots[i].y += Math.sin(shots[i].dir * Math.PI / 180) * 12 * timeScaleFactor;
-			if (distance(localPlayer.x, localPlayer.y, shots[i].x, shots[i].y) < 14) {
+			if (distance(localPlayer.x, localPlayer.y, shots[i].x, shots[i].y) < 14 && !localPlayer.hit) {
 				localPlayer.hit = true;
 				localPlayer.hitTimer = 40;
 				shipHit(localPlayer.x, localPlayer.y);
+				socket.emit("shipHit");
 			}
 			if (shots[i].x < 0 || shots[i].x > canvas.width || shots[i].y < 0 || shots[i].y > canvas.height) {
 				shots.splice(i, 1);
@@ -219,6 +237,14 @@
 			y: position.y,
 			dir: position.dir
 		});
+	});
+	
+	// Handles other ships getting hit
+	socket.on("shipHit", function(id) {	
+		if (players.hasOwnProperty(id)) {
+			shipHit(players[id].x, players[id].y);
+			delete players[id];
+		}
 	});
 	
 	// Sets up WASD control scheme

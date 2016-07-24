@@ -32,6 +32,10 @@ body {
 	padding: 1em;
 }
 
+#gameover {
+	width: 400px;
+}
+
 input[type=text] {
     width: 100%;
     padding: 14px 20px;

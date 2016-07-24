@@ -91,6 +91,11 @@
 			});
 		});
 		
+		// Tells all clients when a ship has been shotFired
+		socket.on("shipHit", function() {
+			socket.broadcast.emit("shipHit", socket.id);
+		});
+		
 		// Handle disconnections
 		socket.on("disconnect", function() {
 			socket.broadcast.emit("removePlayer", socket.id);
