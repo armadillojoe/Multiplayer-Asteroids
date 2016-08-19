@@ -16,8 +16,8 @@
 	
 	// Stores images to draw easier
 	let imageCache = {
-		ship: null,
-		redShip: null
+		ship: new Image(),
+		redShip: new Image()
 	};
 	
 	// Used for delta time
@@ -34,11 +34,13 @@
 		x: 0,
 		y: 0,
 		angle: 270,
+		heat: 0,
 		left: false,
 		right: false,
 		up: false,
 		shoot: false,
-		hit: false
+		hit: false,
+		overheated: false
 	};
 	
 	// Initialize game
@@ -48,8 +50,6 @@
 	
 	// Starts game once user types in their name
 	function init() {
-		imageCache.ship = new Image();
-		imageCache.redShip = new Image();
 		imageCache.ship.src = "../images/ship.png";
 		imageCache.redShip.src = "../images/shipRed.png";
 		let name = document.getElementById("nameinput").value;
@@ -105,6 +105,18 @@
 			ctx.font = "12px sans-serif";
 			ctx.fillText(localPlayer.name, localPlayer.x, localPlayer.y - 20);
 		}
+		if (!localPlayer.overheated) {
+			ctx.fillStyle = "#000000";
+			ctx.strokeStyle = "#000000";
+		} else {
+			ctx.fillStyle = "#FF0000";
+			ctx.strokeStyle = "#FF0000";
+		}
+		let barX = canvas.width / 2 - 100;
+		let barY = 5;
+		ctx.rect(barX, barY, 200, 20);
+		ctx.stroke();
+		ctx.fillRect(barX, barY, localPlayer.heat * 2, 20);
 		requestAnimationFrame(render);
 	}
 	
@@ -152,6 +164,15 @@
 				gameOver();
 			}
 			localPlayer.hitTimer--;
+		}
+		if (localPlayer.heat > 100) {
+			localPlayer.overheated = true;
+		}
+		if (localPlayer.heat > 0) {
+			localPlayer.heat -= 3;
+		} else {
+			localPlayer.heat = 0;
+			localPlayer.overheated = false;
 		}
 		
 		// Update shots
@@ -286,13 +307,16 @@
 	
 	// Lets all clients and the server know a shot was fired
 	function shotFired() {
-		let rad = localPlayer.angle * Math.PI / 180;
-		shots.push({
-			x: (localPlayer.x + Math.cos(rad) * 16) - 2,
-			y: localPlayer.y + Math.sin(rad) * 16,
-			dir: localPlayer.angle
-		});
-		socket.emit("shotFired");
+		if (!localPlayer.overheated) {
+			let rad = localPlayer.angle * Math.PI / 180;
+			localPlayer.heat += 10;
+			shots.push({
+				x: (localPlayer.x + Math.cos(rad) * 16) - 2,
+				y: localPlayer.y + Math.sin(rad) * 16,
+				dir: localPlayer.angle
+			});
+			socket.emit("shotFired");
+		}
 	}
 	
 	// Draws rotated images centered at the x and y coordinate
