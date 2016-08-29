@@ -50,7 +50,8 @@
 			y: newPlayer.y,
 			angle: newPlayer.angle
 		};
-		console.log("New user connected! Total Users: %d", Object.keys(players).length);
+		console.log("New user connected! Total Users: %d",
+                Object.keys(players).length);
 
 		// Send all other players to the new player
 		socket.on("requestPlayers", function(name) {
@@ -101,7 +102,8 @@
 			socket.broadcast.emit("removePlayer", socket.id);
 			if (players.hasOwnProperty(socket.id)) {
 				delete players[socket.id];
-				console.log("A user has disconnected! Total Users: %d", Object.keys(players).length);
+				console.log("A user has disconnected! Total Users: %d",
+                    Object.keys(players).length);
 			}
 		});
 	});

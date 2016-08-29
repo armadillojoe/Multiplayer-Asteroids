@@ -1,8 +1,8 @@
 {
   "name": "game",
   "version": "1.0.0",
-  "description": "testing a socket io game",
-  "main": "index.js",
+  "description": "Multiplayer asteroids like game",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
